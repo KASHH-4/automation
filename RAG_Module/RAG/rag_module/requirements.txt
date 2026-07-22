@@ -1,0 +1,15 @@
+# ── Core RAG pipeline ─────────────────────────────────────────────────────────
+langchain>=0.2.0
+langchain-community>=0.2.0
+faiss-cpu>=1.7.4
+sentence-transformers>=2.7.0
+pypdf>=4.0.0
+python-dotenv>=1.0.0
+
+# ── ML / numerical backbone (pulled in by sentence-transformers) ──────────────
+torch>=2.0.0
+transformers>=4.38.0
+numpy>=1.26.0
+
+# ── Sample PDF generator (used by create_sample_pdfs.py only) ────────────────
+fpdf2>=2.7.9
