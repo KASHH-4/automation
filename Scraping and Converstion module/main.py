@@ -1,6 +1,7 @@
 """Single entry point for the DuckDuckGo-first laptop price flow."""
 
 import json
+from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from config import COUNTRY_CURRENCY
@@ -87,10 +88,88 @@ def build_report():
             
         result["confidence_score"] = _score_title(result["title"], LAPTOP_MODEL)
         successful_results.append(result)
+    import statistics
+    if successful_results:
+        max_score = max(r["confidence_score"] for r in successful_results)
+        baseline_group = [r["converted_price"] for r in successful_results if r["confidence_score"] >= max_score - 5]
+        
+        if baseline_group:
+            median_price = statistics.median(baseline_group)
+            std_dev = statistics.pstdev(baseline_group) if len(baseline_group) > 1 else median_price * 0.2
+            
+            # Statistical bound allowance: median +/- 2 standard deviations
+            lower_bound = max(median_price - (2 * std_dev), median_price * 0.4)
+            upper_bound = median_price + (2 * std_dev)
+            
+            # Prevent incredibly tight bounds if all laptops happen to be exactly the same price
+            if upper_bound - lower_bound < median_price * 0.2:
+                lower_bound = median_price * 0.7
+                upper_bound = median_price * 1.5
+                
+            filtered_results = []
+            for r in successful_results:
+                primary_price = r["converted_price"]
+                
+                # Safe Zone: If primary price is already within statistical bounds, do not snap it
+                if lower_bound <= primary_price <= upper_bound:
+                    filtered_results.append(r)
+                else:
+                    # Primary price is an anomaly. Scan all extracted prices for a valid one
+                    best_price = None
+                    if "all_prices" in r and r["all_prices"]:
+                        for p_obj in r["all_prices"]:
+                            conv_p = convert_currency(p_obj["price"], p_obj["currency"], target_currency)
+                            if lower_bound <= conv_p <= upper_bound:
+                                # Lock onto the valid price closest to the median
+                                if best_price is None or abs(conv_p - median_price) < abs(best_price - median_price):
+                                    best_price = conv_p
+                                    
+                    if best_price is not None:
+                        r["converted_price"] = best_price
+                        filtered_results.append(r)
+                        
+            successful_results = filtered_results
+    # Map target country to its TLD
+    country_tld_map = {
+        "India": ".in",
+        "United States": ".us",
+        "USA": ".us",
+        "United Kingdom": ".co.uk",
+        "Germany": ".de",
+        "France": ".fr",
+        "Japan": ".jp",
+        "Canada": ".ca",
+        "Australia": ".com.au",
+    }
+    target_tld = country_tld_map.get(TARGET_COUNTRY, ".com")
 
-    # Sort globally by confidence score descending, then by price ascending
-    successful_results.sort(key=lambda item: (-item["confidence_score"], item["converted_price"]))
-    all_results = successful_results
+    def get_domain_priority(url):
+        domain = urlparse(url).netloc.lower()
+        if domain.endswith(target_tld):
+            return 0
+        if domain.endswith(".com"):
+            return 1
+        return 2
+
+    # Sort globally by:
+    # 1. confidence_score (descending)
+    # 2. domain_priority (ascending, so 0 is best)
+    # 3. converted_price (ascending)
+    successful_results.sort(key=lambda item: (
+        -item["confidence_score"],
+        get_domain_priority(item["url"]),
+        item["converted_price"]
+    ))
+    
+    # Enforce max 5 laptops per source (using the highest matching score)
+    source_counts = {}
+    all_results = []
+    for result in successful_results:
+        source = result["source"]
+        if source_counts.get(source, 0) >= 5:
+            continue
+        source_counts[source] = source_counts.get(source, 0) + 1
+        all_results.append(result)
 
     converted_prices = [result["converted_price"] for result in all_results]
 

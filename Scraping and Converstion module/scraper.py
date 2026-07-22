@@ -38,7 +38,13 @@ def _score_title(title, model):
     tokens = _get_model_tokens(model)
     if not tokens:
         return 0
-    return sum(1 for token in tokens if token in title_lower)
+        
+    score = 0
+    for idx, token in enumerate(tokens):
+        if token in title_lower:
+            # Give high weight to the first two tokens (usually Brand and Model)
+            score += 10 if idx < 2 else 1
+    return score
 
 
 def _fetch_html(url):
@@ -245,13 +251,12 @@ def _collect_product_candidates(html, page_url, default_currency, model=""):
         if score < 1:
             continue
             
-        # 3. Extract Price
-        # Look for typical price patterns like ₹54,990 or Rs. 54,990 or 54,990 INR
-        price_match = re.search(r'(₹|rs\.?|inr|usd|\$|eur|€|£)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)', text, re.I)
-        extracted_currency = default_currency
+        # 3. Extract Price(s)
+        price_matches = re.finditer(r'(₹|rs\.?|inr|usd|\$|eur|€|£)\s*([0-9,]+(?:\.[0-9]{1,2})?)', text, re.I)
         
-        if price_match:
-            sym = price_match.group(1).lower()
+        valid_prices = []
+        for match in price_matches:
+            sym = match.group(1).lower()
             if sym in ["₹", "rs", "rs.", "inr"]:
                 extracted_currency = "INR"
             elif sym in ["$", "usd"]:
@@ -260,27 +265,31 @@ def _collect_product_candidates(html, page_url, default_currency, model=""):
                 extracted_currency = "EUR"
             elif sym in ["£", "gbp"]:
                 extracted_currency = "GBP"
-            
-            raw_number = price_match.group(2)
-        else:
-            raw_number = None
-            
-        if raw_number:
+            else:
+                extracted_currency = default_currency
+                
+            raw_number = match.group(2)
             try:
                 price = _parse_price_number(raw_number)
-                # Validate realistic price bounds based on extracted currency
-                min_price = 10000 if extracted_currency == "INR" else 100
+                min_price = 20000 if extracted_currency == "INR" else 200
                 max_price = 2500000 if extracted_currency == "INR" else 10000
-                
                 if price >= min_price and price <= max_price:
-                    candidates.append({
-                        "title": title,
-                        "url": url,
+                    valid_prices.append({
                         "price": round(price, 2),
-                        "currency": extracted_currency,
+                        "currency": extracted_currency
                     })
             except ValueError:
                 pass
+                
+        if valid_prices:
+            # By default, take the first valid price as the primary, but keep all for median-snapping later
+            candidates.append({
+                "title": title,
+                "url": url,
+                "price": valid_prices[0]["price"],
+                "currency": valid_prices[0]["currency"],
+                "all_prices": valid_prices
+            })
 
     # Deduplicate results using normalized title and price to merge strategies
     unique_candidates = []
@@ -321,28 +330,29 @@ def _get_top_candidates(candidates, model, fallback_title="", max_results=5):
         return []
 
     valid_candidates = []
-    # Penalize accessories and low prices
-    negative_words = {"case", "cover", "sleeve", "charger", "adapter", "skin", "protector", "refurbished", "keyboard", "bag", "mouse"}
+    # Drop accessories, articles, and low prices
+    negative_words = {"case", "cover", "sleeve", "charger", "adapter", "skin", "protector", "refurbished", "keyboard", "bag", "mouse", "vs", "comparison", "review", "news", "guide", "blog", "story", "highlights"}
     
     # Calculate total expected tokens in model
     tokens_in_model = len(_get_model_tokens(model))
     
     for c in candidates:
-        # Minimum sensible price for a laptop to filter out EMI and accessories
-        if c["price"] < 10000 and c["currency"] == "INR":
+        # Minimum sensible price for a laptop to filter out tiny accessories
+        if c["price"] < 20000 and c["currency"] == "INR":
             continue
-        if c["price"] < 100 and c["currency"] != "INR":
+        if c["price"] < 200 and c["currency"] != "INR":
             continue
             
         penalty = 0
         title_lower = c["title"].lower()
         for word in negative_words:
-            if word in title_lower:
+            # Need to match whole words for short words like "vs"
+            if re.search(r'\b' + re.escape(word) + r'\b', title_lower):
                 penalty += 10
         
         # Penalize questions/articles
-        if "?" in c["title"]:
-            penalty += 10
+        if "?" in c["title"] or penalty > 0:
+            continue # Drop immediately instead of just penalizing
                 
         title_score = _score_title(c["title"], model)
         fallback_score = _score_title(fallback_title, model) if fallback_title else 0
@@ -352,8 +362,10 @@ def _get_top_candidates(candidates, model, fallback_title="", max_results=5):
         if title_score == 0 and fallback_score == 0:
             continue
             
-        # Relaxed match: allow partial matches for discovery
-        if tokens_in_model > 1 and max(title_score, fallback_score) < (tokens_in_model * 0.2):
+        # Strict Match: If the query has multiple tokens (Brand + Model), 
+        # ensure it matched at least one of the high-weight tokens (Brand or Model).
+        # A score of < 10 means it only matched generic terms like "intel" or "gaming" (1 point each)
+        if tokens_in_model >= 2 and title_score < 10:
             continue
             
         valid_candidates.append((c, penalty, title_score, fallback_score))
@@ -453,7 +465,7 @@ def scrape_store(store_hit, model):
     try:
         html = _fetch_html(candidate_url)
         candidates = _collect_product_candidates(html, candidate_url, default_currency, model=model)
-        top_candidates = _get_top_candidates(candidates, model, fallback_title=store_hit.get("title", ""), max_results=None)
+        top_candidates = _get_top_candidates(candidates, model, fallback_title=store_hit.get("title", ""), max_results=5)
     except Exception as exc:
         last_error = exc
 
@@ -462,7 +474,7 @@ def scrape_store(store_hit, model):
         try:
             html = _fetch_html_playwright(candidate_url)
             candidates = _collect_product_candidates(html, candidate_url, default_currency, model=model)
-            top_candidates = _get_top_candidates(candidates, model, fallback_title=store_hit.get("title", ""), max_results=None)
+            top_candidates = _get_top_candidates(candidates, model, fallback_title=store_hit.get("title", ""), max_results=5)
         except Exception as exc:
             last_error = exc
 

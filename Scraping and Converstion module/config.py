@@ -4,7 +4,7 @@
 TARGET_COUNTRY = "India"
 
 # Laptop model to search.
-LAPTOP_MODEL = "Lenovo LOQ"
+LAPTOP_MODEL = "Asus vivobook"
 
 
 # Country -> Currency.
@@ -22,7 +22,7 @@ COUNTRY_CURRENCY = {
 
 
 # DuckDuckGo search is used first, then the supported store list is filtered.
-DDG_RESULTS_LIMIT = 12
+DDG_RESULTS_LIMIT = 30
 
 SUPPORTED_STORES = [
     {
