@@ -21,7 +21,7 @@ import json
 from typing import List
 
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 from config import DATA_DIR, PDF_DIR, DATA_SOURCE_TYPE, JSON_PATH, JSON_KEY
 

@@ -1,0 +1,31 @@
+# Supervisor / orchestration
+langchain>=0.2.0
+langchain-core>=0.2.0
+langchain-google-genai>=2.0.0
+pydantic>=2.7.0
+python-dotenv>=1.0.1
+
+# Company data ingestion module
+pandas>=2.2.0
+pdfplumber>=0.11.0
+
+# RAG module
+langchain-community>=0.2.0
+langchain-huggingface>=0.0.3
+faiss-cpu>=1.7.4
+sentence-transformers>=2.7.0
+pypdf>=4.2.0
+torch>=2.0.0
+transformers>=4.38.0
+numpy>=1.26.0
+fpdf2>=2.7.9
+
+# Market scraper module
+requests>=2.32.0
+beautifulsoup4>=4.12.0
+duckduckgo-search>=8.1.1
+ddgs>=9.14.4
+lxml>=6.0.0
+rich>=13.7.0
+playwright>=1.46.0
+selectolax>=0.3.20
