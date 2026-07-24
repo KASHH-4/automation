@@ -1,3 +1,20 @@
-Quotation*
-*.pdf
-supplier_prices.xlsx
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+ENV/
+env/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Project Specific Data
+/data/
+/quotations/
+/output/
+clean_data.json

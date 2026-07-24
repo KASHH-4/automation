@@ -394,7 +394,7 @@ def _get_top_candidates(candidates, model, fallback_title="", max_results=5):
 
 
 def _search_duckduckgo_html(query, max_results):
-    from ddgs import DDGS
+    from duckduckgo_search import DDGS
     results = []
     blocked_domains = {"youtube.com", "tiktok.com", "instagram.com", "facebook.com", "reddit.com", "twitter.com", "carousell.ph"}
     

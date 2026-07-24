@@ -21,37 +21,25 @@ Original file is located at
 # Reads historical quotation PDFs and exports raw extracted data
 # ============================================
 
-from google.colab import drive
-drive.mount('/content/drive')
-
-from google.colab import files
 import os
 import re
 import json
 
-# Install pdfplumber if not already installed
-!pip install pdfplumber
 import pdfplumber
 
 # --- Setup shared project directory ---
-PROJECT_ROOT = "/content/drive/MyDrive/project"
-os.makedirs(PROJECT_ROOT, exist_ok=True)
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 os.makedirs(f"{PROJECT_ROOT}/quotations", exist_ok=True)
 os.makedirs(f"{PROJECT_ROOT}/output", exist_ok=True)
 
-# --- Step 1: Upload quotation PDFs (or use ones already in Drive) ---
+# --- Step 1: Quotation PDFs directory ---
 QUOTATIONS_DIR = f"{PROJECT_ROOT}/quotations"
 
 existing_pdfs = [f for f in os.listdir(QUOTATIONS_DIR) if f.lower().endswith(".pdf")]
 
 if not existing_pdfs:
-    print("No PDFs found in Drive quotations folder. Please upload your quote PDFs:")
-    uploaded = files.upload()
-    for fname in uploaded.keys():
-        dest = os.path.join(QUOTATIONS_DIR, fname)
-        with open(dest, "wb") as f:
-            f.write(uploaded[fname])
-    existing_pdfs = [f for f in os.listdir(QUOTATIONS_DIR) if f.lower().endswith(".pdf")]
+    print("No PDFs found in quotations folder. Please place your quote PDFs there.")
+    exit(1)
 
 print(f"\n✅ Found {len(existing_pdfs)} PDF(s) in {QUOTATIONS_DIR}")
 for f in existing_pdfs:

@@ -411,12 +411,12 @@ class ProposalSupervisor:
     def _run_market_module_adapter(self, country: str, laptop_query: str) -> str:
         """Adapter for the standalone market module without changing its internals."""
 
-        module_dir = Path(__file__).resolve().parent / "Scraping and Converstion module"
+        module_dir = Path(__file__).resolve().parent / "Scraping_and_Conversion_module"
         config_path = module_dir / "config.py"
 
         if not module_dir.exists() or not config_path.exists():
             raise SupervisorDependencyError(
-                "Market module not found. Expected 'Scraping and Converstion module/config.py'."
+                "Market module not found. Expected 'Scraping_and_Conversion_module/config.py'."
             )
 
         original_config = config_path.read_text(encoding="utf-8")

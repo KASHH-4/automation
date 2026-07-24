@@ -22,15 +22,12 @@ Original file is located at
 # into a single unified clean_data.json for the AI agents
 # ============================================
 
-from google.colab import drive
-drive.mount('/content/drive')
-
 import os
 import json
 from datetime import datetime, timezone
 
 # --- Setup shared project directory ---
-PROJECT_ROOT = "/content/drive/MyDrive/project"
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = f"{PROJECT_ROOT}/output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -138,7 +135,7 @@ clean_data = {
 # ============================================================
 # STEP 5: Export clean_data.json
 # ============================================================
-output_path = f"{OUTPUT_DIR}/clean_data.json"
+output_path = f"{PROJECT_ROOT}/clean_data.json"
 with open(output_path, "w") as f:
     json.dump(clean_data, f, indent=2, ensure_ascii=False)
 

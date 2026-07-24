@@ -21,17 +21,13 @@ Original file is located at
 # Fetches live exchange rates and exports raw rate data
 # ============================================
 
-from google.colab import drive
-drive.mount('/content/drive')
-
 import os
 import json
 import requests
 from datetime import datetime, timezone
 
 # --- Setup shared project directory ---
-PROJECT_ROOT = "/content/drive/MyDrive/project"
-os.makedirs(PROJECT_ROOT, exist_ok=True)
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 os.makedirs(f"{PROJECT_ROOT}/output", exist_ok=True)
 
 # --- Step 1: Configuration ---

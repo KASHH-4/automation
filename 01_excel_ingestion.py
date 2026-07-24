@@ -21,25 +21,21 @@ Original file is located at
 # Reads supplier_prices.xlsx and exports clean raw data
 # ============================================
 
-from google.colab import drive
-drive.mount('/content/drive')
-
-from google.colab import files
 import os
 import pandas as pd
 import json
 
 # --- Setup shared project directory ---
-PROJECT_ROOT = "/content/drive/MyDrive/project"
-os.makedirs(PROJECT_ROOT, exist_ok=True)
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 os.makedirs(f"{PROJECT_ROOT}/data", exist_ok=True)
 os.makedirs(f"{PROJECT_ROOT}/output", exist_ok=True)
 os.makedirs(f"{PROJECT_ROOT}/quotations", exist_ok=True)
 
-# --- Step 1: Upload the Excel file from your system ---
-print("Please select your supplier_prices.xlsx file:")
-uploaded = files.upload()
-excel_filename = list(uploaded.keys())[0]
+# --- Step 1: Excel file from data directory ---
+excel_filename = f"{PROJECT_ROOT}/data/supplier_prices.xlsx"
+if not os.path.exists(excel_filename):
+    print(f"Error: Could not find {excel_filename}")
+    exit(1)
 
 # --- Step 2: Read the Excel file ---
 supplier_df = pd.read_excel(excel_filename)
@@ -62,7 +58,7 @@ if not missing:
 
 # --- Step 4: Preview the data ---
 print("\nFirst 5 rows:")
-display(supplier_df.head())
+print(supplier_df.head())
 
 print("\nNull value counts per column:")
 print(supplier_df.isnull().sum())
@@ -75,7 +71,7 @@ if "Unit Price" in supplier_df.columns:
     non_numeric_prices = supplier_df[pd.to_numeric(supplier_df["Unit Price"], errors="coerce").isnull()]
     if len(non_numeric_prices) > 0:
         print(f"\n⚠️ {len(non_numeric_prices)} rows have non-numeric Unit Price:")
-        display(non_numeric_prices)
+        print(non_numeric_prices)
 
 # --- Step 6: Export raw data as JSON for downstream notebooks ---
 supplier_records = supplier_df.to_dict(orient="records")

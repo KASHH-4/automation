@@ -21,15 +21,12 @@ Original file is located at
 # Validates and cleans supplier, quotation, and exchange rate raw data
 # ============================================
 
-from google.colab import drive
-drive.mount('/content/drive')
-
 import os
 import re
 import json
 
 # --- Setup shared project directory ---
-PROJECT_ROOT = "/content/drive/MyDrive/project"
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = f"{PROJECT_ROOT}/output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
